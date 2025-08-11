@@ -255,18 +255,20 @@
 <script>
 let countdownTimer;
 
+/* 표시 업데이트 */
 function updateDisplay(elementId, newValue) {
   const element = document.getElementById(elementId);
-  if (element.textContent !== newValue) {
+  if (element && element.textContent !== newValue) {
     element.textContent = newValue;
   }
 }
 
+/* 카운트다운 시작 */
 function startCountdown(targetDate) {
   if (countdownTimer) clearInterval(countdownTimer);
 
   function update() {
-    const now = new Date().getTime();
+    const now = Date.now();
     const distance = targetDate - now;
 
     if (distance <= 0) {
@@ -285,22 +287,37 @@ function startCountdown(targetDate) {
   }
 
   update();
-  countdownTimer = setInterval(update, 60000);
+  countdownTimer = setInterval(update, 60000); // 1분마다 갱신
 }
 
+/* ✅ localStorage 사용 + 폴백 */
+const STORAGE_KEY = "dday_target_date";
+
 function saveDdayDate(dateString) {
-  window.ddayData = { targetDate: dateString };
+  try {
+    localStorage.setItem(STORAGE_KEY, dateString);
+  } catch (e) {
+    console.warn("Failed to save to localStorage:", e);
+    window.ddayData = { targetDate: dateString }; // 폴백(새로고침 시 사라짐)
+  }
 }
 
 function loadDdayDate() {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v) return v;
+  } catch (e) {
+    console.warn("Failed to read localStorage:", e);
+  }
   return window.ddayData ? window.ddayData.targetDate : null;
 }
 
+/* 초기화 */
 document.addEventListener('DOMContentLoaded', function() {
   const savedDate = loadDdayDate();
   const dateInput = document.getElementById("targetDate");
   const dateWrapper = document.querySelector('.date-input-wrapper');
-  
+
   dateInput.addEventListener('change', function() {
     if (dateInput.value) {
       dateWrapper.classList.add('has-date');
@@ -308,10 +325,10 @@ document.addEventListener('DOMContentLoaded', function() {
       dateWrapper.classList.remove('has-date');
     }
   });
-  
+
   if (savedDate) {
-    dateInput.value = savedDate;
-    dateWrapper.classList.add('has-date');
+    dateInput.value = savedDate;             // 입력값 복원
+    dateWrapper.classList.add('has-date');   // placeholder 숨김
     const targetDate = new Date(savedDate + "T00:00:00").getTime();
     startCountdown(targetDate);
   } else {
@@ -319,18 +336,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+/* 버튼 클릭 */
 document.getElementById("setDate").addEventListener("click", () => {
   const selectedDate = document.getElementById("targetDate").value;
   const dateWrapper = document.querySelector('.date-input-wrapper');
-  
+
   if (!selectedDate) {
     alert("날짜를 선택해주세요!");
     return;
   }
-  
+
   dateWrapper.classList.add('has-date');
   saveDdayDate(selectedDate);
-  
+
   const targetDate = new Date(selectedDate + "T00:00:00").getTime();
   startCountdown(targetDate);
 });
